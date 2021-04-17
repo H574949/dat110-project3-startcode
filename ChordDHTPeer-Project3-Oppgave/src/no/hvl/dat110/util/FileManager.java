@@ -55,15 +55,16 @@ public class FileManager {
 	public void createReplicaFiles() {
 	 	
 		// implement
-		
 		// set a loop where size = numReplicas
-		
 		// replicate by adding the index to filename
-		
 		// hash the replica
-		
 		// store the hash in the replicafiles array.
 
+		
+		for(int x=0; x<numReplicas; x++) {
+			String replica = filename+x;
+			replicafiles[x] = Hash.hashOf(replica);
+		}
 	}
 	
     /**
@@ -79,9 +80,9 @@ public class FileManager {
     	// Task2: assign a replica as the primary for this file. Hint, see the slide (project 3) on Canvas
     	
     	// create replicas of the filename
-    	
+ 
 		// iterate over the replicas
-    	
+    
     	// for each replica, find its successor by performing findSuccessor(replica)
     	
     	// call the addKey on the successor and add the replica
@@ -89,7 +90,20 @@ public class FileManager {
     	// call the saveFileContent() on the successor
     	
     	// increment counter
+    
+    	Random rnd = new Random();
+    	int index = rnd.nextInt(Util.numReplicas-1);
     	
+    	createReplicaFiles();
+    	for(int x = 0; x < replicafiles.length; x++) {
+    		BigInteger replica = replicafiles[x];
+    		NodeInterface succ = chordnode.findSuccessor(replica);
+    		
+    		succ.addKey(replica);
+    		
+    		succ.saveFileContent(filename, replica, bytesOfFile, counter==index);
+    		counter++;
+    	}
     		
 		return counter;
     }
@@ -102,8 +116,7 @@ public class FileManager {
 	 */
 	public Set<Message> requestActiveNodesForFile(String filename) throws RemoteException {
 		
-		this.filename = filename;
-		Set<Message> succinfo = new HashSet<Message>();
+		
 		// Task: Given a filename, find all the peers that hold a copy of this file
 		
 		// generate the N replicas from the filename by calling createReplicaFiles()
@@ -115,6 +128,17 @@ public class FileManager {
 		// get the metadata (Message) of the replica from the successor, s (i.e. active peer) of the file
 		
 		// save the metadata in the set succinfo.
+		this.filename = filename;
+		Set<Message> succinfo = new HashSet<Message>();
+		createReplicaFiles();
+		
+		
+		for(int x = 0; x < replicafiles.length; x++) {
+			BigInteger replica = replicafiles[x];
+			NodeInterface succ = chordnode.findSuccessor(replica);
+			Message msg = succ.getFilesMetadata(replica);
+			succinfo.add(msg);
+		}
 		
 		this.activeNodesforFile = succinfo;
 		
@@ -136,6 +160,12 @@ public class FileManager {
 		// use the primaryServer boolean variable contained in the Message class to check if it is the primary or not
 		
 		// return the primary
+		
+		for(Message msg : activeNodesforFile) {
+			if(msg.isPrimaryServer())
+				return Util.getProcessStub(msg.getNodeIP(), msg.getPort());
+			
+		}
 		
 		return null; 
 	}
